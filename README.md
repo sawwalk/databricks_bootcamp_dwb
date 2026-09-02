@@ -1,6 +1,11 @@
 # databricks_bootcamp_dwb
 A bootcamp created by Data With Baraa
 
+## Notes:
+local file path: /c/Users/samww/Documents/Data Analyst+Engineer/projects/databricks_data_lakehouse_project/databricks_bootcamp_dwb
+
+Is it standard practice to create a timestamp column showing when data was processed in the silver table in a medalion architecture?
+
 ## prompts
 ### For silver_crm_cust_info
 ---
@@ -76,6 +81,8 @@ Use these steps as a guide:
 
 The output should be a fully formatted notebook.
 
+Result: medium
+
 Feedback:
 There was no initial inspection of the data so I added that in. This is not important for the pipeline but an initial look is improtant for the reader.
 
@@ -96,3 +103,103 @@ Please read over my feedback and adjust the notebook accordingly.
 -- 
 I have decided that I will handle the date issue by treating all of the rows with null end_date as correct but switching the start and end dates for all other rows.
 Of course I understand that this approach contains risk and I want it to be documented as such, please add this to the flagged items. 
+---
+
+### For silver_crm_sales_details
+Create a silver layer for databricks_bootcamp_dwb.bronze.crm_sales_details in this notebook
+
+Result: medium (it drew context from my other notbooks)
+
+Feedback:
+duplicate exploration was handled well but did not check show many nulls were in each column of the dataset (you should always do this).
+
+You can explore the bronze data using SQL but use PySpark to upload the bronze table into a dataframe and perform opperations on it, break up the transformation step into its separate transformations and preview the data at the end of every step using display(), look at silver_crm_prd_info for an example of this. 
+
+0 dates should be converted to nulls not imputed or calculated
+
+Do not create any calculated fields in the silver table, those are for the gold layer.
+
+
+I can see that sales_amount and sls_price are sls_sales are essentially duplicates of eachother with some null rows in each,
+The nulls only appear in rows with quantity > 1. My hypothesis is that these columns should not be equal when quantity > 1 and that either sls_price should be calculated by dividing sls_sales by quantity or that sls_sales should be calculated by multiplying sls_price by quantity. 
+
+I want to verify the sls_price column by comparing it to the prd_cost column in databricks_bootcamp_dwb.bronze.crm_prd_info. (Join the tables using left join to preserve all of the rows in crm_prd_info since it will be a many to one relationship)
+
+Refined prompt:
+CONTEXT: In this dataset, sls_sales and sls_price appear to be near-duplicates of each other, 
+with nulls appearing in each column, but only in rows where quantity > 1.
+
+HYPOTHESIS: sls_sales and sls_price should NOT be equal when quantity > 1. Instead, one of the 
+following relationships should hold:
+  - sls_price = sls_sales / quantity, OR
+  - sls_sales = sls_price * quantity
+
+VERIFICATION TASK:
+Check the hypothesis by comparing sls_price against prd_cost in 
+databricks_bootcamp_dwb.bronze.crm_prd_info.
+
+PROCEDURE: dedupe_and_join
+  Applies to an input table called `sales_input`.
+
+  STEP 1: Reduce `sales_input` to one row per prd_key.
+    - Rule: keep the first instance per prd_key.
+    - Ordering: no particular order.
+  → Store as: sales_deduped
+
+  STEP 2: LEFT JOIN crm_prd_info (left/preserving table) to sales_deduped, on prd_key.
+    - Relationship: many crm_prd_info rows (product versions) to one sales_deduped row per prd_key.
+    - Do not drop or duplicate any crm_prd_info rows.
+  → Store as: joined_result
+
+  STEP 3: Display the full joined_result table.
+
+---
+
+RUN 1: Call dedupe_and_join with sales_input = crm_sales_details (all rows).
+
+RUN 2: Call dedupe_and_join with sales_input = crm_sales_details filtered to quantity > 1.
+
+---
+After failed joins between keys:
+---
+
+NEW HYPOTHESIS: crm_sales_details contains abreviated product keys which is why the joins between crm_sales_details and crm_prd_info are not working.
+
+KEY TABLES AND COLUMNS:
+table 1:
+databricks_bootcamp_dwb.bronze.crm_sales_details
+table columns:
+sls_prd_key 
+sls_quantity
+sls_price
+
+table 2:
+databricks_bootcamp_dwb.bronze.crm_prd_info
+table columns:
+prd_key
+prd_cost
+
+GOAL: To clean up the notebook and successfully find product key matches between crm_sales_details and crm_prd_info. 
+
+Step 1: Undo the failed most recent analysis that attempted to compare product prices but found no matches between keys in crm_prd_info and crm_sales_details so that the notebook does not become too cluttered.
+
+Step 2: Analyse keys in prd_key and sls_prd_key, search for patterns. In particular check if any keys in sls_prd_key are a subset of keys in prd_key.
+
+---
+After substring matching was found to be possible:
+---
+
+Now please use this substring matching technique to retest this hypothesis.
+
+HYPOTHESIS: sls_sales and sls_price should NOT be equal when quantity > 1. Instead, one of the 
+following relationships should hold:
+  - sls_price = sls_sales / quantity, OR
+  - sls_sales = sls_price * quantity
+
+Do this by comparing values in sls_price with values in prd_cost and searching for matches. Search for any patterns and descrpancies. 
+
+please display example rows from the joined tables so that I can see for myself.
+
+---
+
+Please re-structure the notebook so that this sales price to product cost comparison gets put into an appendix section at the end of silver_crm_sales_details. 
