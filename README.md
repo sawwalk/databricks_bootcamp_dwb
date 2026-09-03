@@ -228,6 +228,6 @@ Start building the silver_multi-table_EDA.
 - Identify primary and forign keys in each table.
 - Identify compatible tables based on their primary and forign keys and test the joins between these tables. 
 
-CONTRAINTS:
+CONSTRAINTS:
 Do not transform the data in any way. This notebook is exploration only. 
 Only use sql to query the data.
