@@ -16,9 +16,12 @@ the output df should contain exactly one row for each distinct cst_key.
 
 Keep the most complete row for each cst_key amoung the candidates and drop the others.  
 
+---
 Result: Bad
 
+
 Retry (I went back and added a temporary index to df to make identifying the rows to drop easier) I then chained multiple prompts together as follows:
+---
 
 - Modify dup_rows_cst_key so that it contains a column that counts the number of nulls in each row.
 Store as: dup_cst_key_nulls.
@@ -39,6 +42,7 @@ I verified this by manually checking but that will not be good enough for a data
 
 Can you re-design this workflow so that it drops all of the rows where all columns except cst_key and temp_index are null without relying on human verification.
 
+---
 Result: good
 
 ---
@@ -48,11 +52,12 @@ run agains df_null_clean.
 - In cst_marital_status map S to single and M to married
 - In cst_gndr map F to female and M to male
 
+---
 Result: good
 
 ### silver_crm_prd_info
 ## Phase3 - Building Silver Layer
----
+
 
 Build a new notebook that analyzes and cleans the data in databricks_bootcamp_dwb.bronze.crm_prd_info. We are building a silver layer from a bornze layer in a medalion achitecture.
 
@@ -81,9 +86,11 @@ Use these steps as a guide:
 
 The output should be a fully formatted notebook.
 
+---
 Result: medium
 
 Feedback:
+---
 There was no initial inspection of the data so I added that in. This is not important for the pipeline but an initial look is improtant for the reader.
 
 You should always inspect rows with duplicate prd_keys during exploration. After doing this I found that the duplicates showed price changes over time. Since these duplicates hold information it is not appropriate to drop them in the silver layer as was done initially. I do not think we should be dropping any rows due to duplication in this notebook. 
@@ -100,17 +107,19 @@ Everything else looks good at the moment.
 
 Please read over my feedback and adjust the notebook accordingly. 
 
--- 
+
 I have decided that I will handle the date issue by treating all of the rows with null end_date as correct but switching the start and end dates for all other rows.
 Of course I understand that this approach contains risk and I want it to be documented as such, please add this to the flagged items. 
----
+
 
 ### For silver_crm_sales_details
+
 Create a silver layer for databricks_bootcamp_dwb.bronze.crm_sales_details in this notebook
 
 Result: medium (it drew context from my other notbooks)
 
 Feedback:
+
 duplicate exploration was handled well but did not check show many nulls were in each column of the dataset (you should always do this).
 
 You can explore the bronze data using SQL but use PySpark to upload the bronze table into a dataframe and perform opperations on it, break up the transformation step into its separate transformations and preview the data at the end of every step using display(), look at silver_crm_prd_info for an example of this. 
