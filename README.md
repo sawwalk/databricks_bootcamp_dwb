@@ -2,7 +2,7 @@
 A bootcamp created by Data With Baraa
 
 ## Notes:
-local file path: /c/Users/samww/Documents/Data Analyst+Engineer/projects/databricks_data_lakehouse_project/databricks_bootcamp_dwb
+local file path: Documents/'Data Analyst+Engineer'/projects/databricks_data_lakehouse_project/databricks_bootcamp_dwb
 
 Is it standard practice to create a timestamp column showing when data was processed in the silver table in a medalion architecture?
 
@@ -212,3 +212,31 @@ please display example rows from the joined tables so that I can see for myself.
 ---
 
 Please re-structure the notebook so that this sales price to product cost comparison gets put into an appendix section at the end of silver_crm_sales_details. 
+
+### For splitting prd_key
+---
+There is another transformation that I forgot to add in silver_crm_prd_info. 
+
+CONTEXT:
+the column prd_key is a combined column that contains both the product key and product category id. The category id is located in the first 5 characters of the string, a '-' then separates the category id from the product key so the product key goes from the 7th character to the end. 
+
+TASK:
+Add a transformation that separates the category id and the product key into two separate columns named category_id and product_key respectively.
+
+### silver_multi-table_EDA
+ROLE: You are a data engineer who is creating a medalion architecture pipline with over 10 years of experience.
+
+CONTEXT: This silver_multi-table_EDA notebook is supposed to provide a place to conduct EDA and perform data quality checks involving multiple tables in the silver layer -- databricks_bootcamp_dwb.silver.
+
+PHILOSOPHY: The intended workflow is to create an initial draft of all the notebooks that handle the silver transformations for each table. Then verify in this notebook by checking consistancy accross tables and then iterating on the silver notebooks if issues arise.
+
+TASK:
+Start building the silver_multi-table_EDA.
+- Introduce it's purpose in a markdown at the top of the notebook.
+- Preview the first 10 rows of every table in the silver schema.
+- Identify primary and forign keys in each table.
+- Identify compatible tables based on their primary and forign keys and test the joins between these tables. 
+
+CONSTRAINTS:
+Do not transform the data in any way. This notebook is exploration only. 
+Only use sql to query the data.
