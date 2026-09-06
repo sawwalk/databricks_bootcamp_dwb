@@ -235,8 +235,172 @@ Start building the silver_multi-table_EDA.
 - Introduce it's purpose in a markdown at the top of the notebook.
 - Preview the first 10 rows of every table in the silver schema.
 - Identify primary and forign keys in each table.
-- Identify compatible tables based on their primary and forign keys and test the joins between these tables. 
+- Identify compatible tables based on their primary and forign keys and test the joins between these tables.
 
 CONSTRAINTS:
 Do not transform the data in any way. This notebook is exploration only. 
 Only use sql to query the data.
+
+
+Feedback:
+This is a good first draft, Here are some things to refine.
+At the very start of the notebook I want you to go through each table and identify all of the columns that contain id, num or key and display them as potential join columns. You can use this format bellow to reccord the potential join columns and  relationships between the tables. Create one at the start of the notebook to represent the best 1st guess. 
+
+Then after the 1st wave of testing make a second version of the join coumns, keeping the confirmed relationships and trying new ones.
+
+Example diagram:
+### Join columns
+crm_customers:
+- customer_id
+- customer_key --> erp_customers.customer_id
+
+crm_products:
+- product_id
+- product_key
+- category_id --> erp_products.product_id
+
+crm_sales:
+- order_number
+- product_key
+- customer_id
+
+erp_customer_location:
+- customer_id --> crm_customers.customer_key, crm_sales.customer_key
+
+erp_customers:
+- customer_id --> crm_customers.customer_key, crm_sales.customer_key
+
+erp_products:
+- product_id --> crm_products.category_id
+
+During testing:
+When matches are not found during the testing phase provide 3 samplese of the tested columns from each table.
+
+Tests to try:
+test erp_customers.customer_id and erp_customer_location.customer_id  with crm_customers.customer_key
+test crm_products.category_id with erp_products.product_id
+
+Did not test joins between erm tables. 
+Did not test joins between erm tables and crm_sales
+
+Feedback 2:
+I need a clearer summary from the join relationship diagram.
+If partial matches are found between columns then instead of writing (TEST RESULTS ABOVE) write a tick and then include the percentage of orphaned records in brackets () with respect to the left hand table. 
+
+customer_key → erp_customers.customer_id (TEST RESULTS ABOVE)
+
+in this example customer_key is the left hand table.
+
+Feedback 3:
+I believe that crm_customers.customer_id are substrings of erp_customer_location.customer_id and erp_customers.customer_id
+please test this theory.
+
+Test if crm_products.category_id matches erp_products.product_id once both columns are normalized so that all separators are - and not _. 
+
+Document findings. 
+
+Feedback 3:
+I thought of something that I should have done at the very begging. and I want to implement it now so that I can have a reccord of it for next time. 
+
+After identifying all of the potential join columns display at least the first 100 rows of each side by side, try to group them together based on the initial hypothesized join relationship table.
+
+---
+
+## Prompt to Claude
+### Prompt 1
+ROLE: I want you to help me with prompt engineering and workflow design in the context of data cleaning as a data engineer.
+
+CONTEXT: I am working in databricks creating a pipeline using the medalion architecture.
+
+TASK 1: Please help me to create a refined prompt for this join diagram to document relationships between tables. The idea is to create a hypothesis join diagram at the start of the analysis that contains initial guesses of which columns in each table relate to each other, then test the joins in the hypothesis and create a second join diagram with the results.
+
+
+HYPOTHESIS JOIN DIAGRAM EXAMPLE: 
+
+**crm_customers:**
+* customer_id (primary key) → crm_sales.customer_id ?
+* customer_id (primary key) → erp_customer_location.customer_id ? 
+  * customer_id is substring of erp_customer_location.customer_id suspected
+* customer_key → erp_customers.customer_id ?
+
+**crm_products:**
+* product_id (primary key) → crm_sales.product_key
+* product_key
+* category_id → erp_products.product_id ? 
+  * erp_products.product_id contains whitespace suspected
+  * category_id is substring of erp_products.product_id suspected
+
+**crm_sales:**
+* order_number
+* product_key
+* customer_id → erp_customer_location.customer_id ?
+* customer_id → erp_customers.customer_id ?
+
+**erp_customer_location:**
+* customer_id (primary key) → erp_customers.customer_id ?
+
+**erp_customers:**
+* customer_id (primary key)
+
+**erp_products:**
+* product_id (primary key)
+
+Each table is listed in bold. Each potential join column belonging to each table is listed under it's bold heading. Relationships between a tables column and another tables column are indicated with an arrow. Indented dot points detail suspected data quality issues that will need to be resolved for the joins to work. Note each relationship works two ways but they are only documented once in the diagram. The user fills the diagram from the top down so that for each table the user only considers potential relationships from tables bellow as the relationships from the tables above should already be reccorded, thus we don't have to write relationships twice. 
+
+The hypothesis diagram is supposed to be a colaborative effort between AI and human. The AI will be called appon to make an initial draft according to it's reasoning and then the human will inspect it and make edits and add suspected data quality issues. The point of the diagram is to find an effective way for the human to organize their thoughts and to communicate them with the AI. If this diagram is hard for the AI to read and interpret then it needs to be re-designed. 
+
+
+RESULT JOIN DIAGRAM EXAMPLE:
+**crm_customers:**
+* customer_id (primary key) → crm_sales.customer_id ✓ **(59.7% orphaned)**
+* customer_id (primary key) → erp_customer_location.customer_id ✓ (0% orphaned)
+  * customer_id is substring of erp_customer_location.customer_id confirmed ✓
+* customer_key → erp_customers.customer_id ❌ (100% orphaned)
+
+**crm_products:**
+* product_id (primary key) → crm_sales.product_key ✓ (0% orphaned)
+* product_key
+* category_id → erp_products.product_id ❌ (100% orphaned)
+  * erp_products.product_id contains whitespace suspected ❌ (whitespace was not present)
+  * category_id is substring of erp_products.product_id suspected ❌ (substring matching failed)
+
+**crm_sales:**
+* order_number
+* product_key
+* customer_id → erp_customer_location.customer_id  ✓ (0% orphaned)
+* customer_id → erp_customers.customer_id  ✓ (0% orphaned)
+
+**erp_customer_location:**
+* customer_id (primary key) → erp_customers.customer_id  ✓ (0% orphaned)  
+
+**erp_customers:**
+* customer_id (primary key)
+
+**erp_products:**
+* product_id (primary key)
+
+
+TRANSFORMATION TABLE: 
+AI creates a table that documents all of the transformations that were used to handle data quality issues in columns
+|table|column|transformation|
+
+As you can see the result join diagram shows the quality of each join as well as documenting outcomes with date quality issues. A summary of the data transformations used appears directly bellow the result diagram.
+
+Please evaluate my prompts and look for any holes or inconsistencies, please quiz me rigorously until you have enough information to make a A+ prompt that is clear, efficient and effective.
+
+### Prompt 2
+Now that the join diagram is sorted out I will give the context of where to use it.
+
+I want to make a pre-silver_multi-table_EDA notebook primarily for identifying relationships between tables.
+
+Here is the initial workflow
+* AI uses pyspark to load each bronze table into a dataframe and goes through each table and identifies all of the columns that contain id, num or key and display them as potential join columns.
+* The user then double checks to see if the AI has missed anything (they can browse columns names in unity catalogue or request samples of each table if column names are not clear)
+* Once potential join columns are agreed on AI displays the first 100 rows of each of them side by side with an attempt to group them e.g. customer related vs product related.
+* Then AI creates the first draft of the hypothesis join diagram, which the user can modify based on what they see in the column samples in the previous step.
+* The AI reads the final hypothesis join diagram and asks the user for instructions if any data quality issues are identified.
+* The AI then transforms each dataframe appropriately and tests the joins between each table.
+* The AI automotically generates the result table that documents findings. 
+* If there are still questions then the user may go back and add more test the hypothesis diagram.
+
+This notebook is purely used for exploration, we use pyspark dataframes to make temporary copies of the data that we can manipulate separately.
