@@ -404,3 +404,162 @@ Here is the initial workflow
 * If there are still questions then the user may go back and add more test the hypothesis diagram.
 
 This notebook is purely used for exploration, we use pyspark dataframes to make temporary copies of the data that we can manipulate separately.
+
+## table_relationship_exploration Prompts
+ROLE: You are a data engineer assisting me in mapping join relationships across
+tables in a medallion architecture pipeline.
+
+CONTEXT: This is an exploration
+of tables in the bronze layer to identify transformations to carry out in the
+silver layer. Include all tables from databricks_bootcamp_dwb.bronze.
+
+TASK: Work through the following steps to produce a HYPOTHESIS JOIN DIAGRAM,
+using only schema-level metadata — column names, data types, table/column
+comments, and any join patterns visible in existing queries or notebooks.
+Do NOT run any queries or inspect row-level data.
+
+STEP 1 — IMPORT & LOCK ORDER:
+Import each table into a dataframe, in the order the tables appear in the
+schema (as returned by your catalog/table listing). This order is now fixed
+for the rest of the analysis — do not reorder tables at any later step.
+
+STEP 2 — IDENTIFY CANDIDATE JOIN COLUMNS:
+For each table, identify columns that could plausibly serve as join keys —
+primary keys, foreign-key-like columns, and any column matching an ID/key/
+code naming pattern.
+
+STEP 3 — DISPLAY FIRST 100 ROWS OF CANDIDATE COLUMNS GROUPED BY SEMANTIC FIELD:
+Display the first 100 rows of all candidate join columns grouped by semantic field (e.g. every
+column that looks like a "customer identifier" together, every column that
+looks like a "product identifier" next to eachother), independent of table order.
+- Columns from the same table that belong to the same semantic field stay
+  adjacent within that group.
+- Every column must still show which table it came from.
+- Format per group, using `table.column.dtype` so table, column, and type are
+  all visible in the column name table_a.column_x.dtype
+ 
+  (columns from the same table that share a semantic field stay adjacent,
+  as above; table order within a group otherwise follows the locked order
+  from Step 1)
+
+STEP 4 — BUILD THE HYPOTHESIS JOIN DIAGRAM:
+Using the fixed order from Step 1, work top-down. For each table, only
+propose relationships to tables that appear BELOW it in that order — tables
+above have already had their outgoing relationships documented, so don't
+repeat a relationship from the other direction.
+
+FOR EACH TABLE:
+- Bold table name as a heading.
+- List every column that could plausibly join to a table below it, as:
+  `column_name (primary key, if applicable) → target_table.target_column ?`
+- Base each hypothesis on: (a) matching/similar column names, (b) semantic
+  meaning (e.g. "customer_id" vs "cust_key"), (c) data type compatibility,
+  (d) join patterns found in existing notebooks/queries.
+- If you suspect a data-quality mismatch that would block the join (substring
+  match, whitespace, casing, type mismatch, etc.), add an indented sub-bullet:
+  `* [issue] suspected`
+- List a column with no hypothesis on its own line, with no arrow.
+- No prose inside the diagram. Put reasoning/notes below it, separately.
+- Record uncertain relationships with "?" rather than omitting them — they
+  get validated at the test stage, not filtered out now.
+
+OUTPUT:
+1. The candidate-columns-by-semantic-field table(s) from Step 3.
+2. The hypothesis join diagram from Step 4, formatted exactly as above.
+3. A short "assumptions / things to double-check" note underneath, if any.
+
+Prompt 2:
+
+ROLE: You are a data engineer helping me validate join hypotheses and
+document the results in a medallion pipeline.
+
+CONTEXT: Below is our hypothesis join diagram, which I've reviewed and
+annotated with my own insight and suspected transformations.
+
+### HYPOTHESIS JOIN DIAGRAM
+
+**crm_cust_info:**
+* cst_id (primary key) → crm_sales_details.sls_cust_id ?
+* cst_key → erp_cust_az12.CID ?
+  * substring/prefix match suspected (CID = "NAS" + cst_key)
+* cst_key → erp_loc_a101.CID ?
+  * hyphen separator suspected (CID = "AW-00011028" vs cst_key = "AW00011028")
+
+**crm_prd_info:**
+* prd_id (primary key)
+* prd_key → crm_sales_details.sls_prd_key ?
+  * substring/prefix match suspected (prd_key = "CO-RF-FR-R92R-62" vs sls_prd_key = "BK-R93R-44")
+* prd_key → erp_px_cat_g1v2.ID ?
+  * substring/suffix and underscore separator suspected (prd_key = "CO-RF-FR-R92R-62" vs ID = "CO_FO")
+* prd_nm
+
+**crm_sales_details:**
+* sls_ord_num (primary key)
+* sls_prd_key
+* sls_cust_id
+
+**erp_cust_az12:**
+* CID → erp_loc_a101.CID ?
+  * format mismatch suspected (erp_cust_az12.CID = "NASAW00011028" vs erp_loc_a101.CID = "AW-00011028")
+
+**erp_loc_a101:**
+* CID
+
+**erp_px_cat_g1v2:**
+* ID
+
+STEP 1 — CLARIFY (do this first, before running any new code to test joins):
+Review the diagram and my annotations. Ask me about anything ambiguous —
+e.g. which transformation to apply for a flagged data-quality issue, or
+what orphan-rate threshold counts as "acceptable" for a join to pass.
+Stop and wait for my answers before moving to Step 2.
+
+STEP 2 — TEST (after I've answered):
+Write and run code to test every relationship in the diagram, against the
+FULL tables — not just the 100-row sample from Prompt 1, which was only for
+eyeballing candidate columns:
+- Calculate % orphaned records (rows in the source column with no match in
+  the target column).
+- Mark ✓ if the join resolves within the threshold we agreed, ❌ if not.
+- For each suspected data-quality issue, check it against real data and
+  mark "confirmed ✓" or "❌ (state why it didn't hold)".
+
+STEP 3 — RESULT DIAGRAM:
+Write this directly into a markdown cell — do not generate it as code or a
+printed code-cell output, same as the hypothesis diagram. Reproduce the full
+diagram in the same structure and table order as the hypothesis, with:
+- ✓ / ❌ next to every tested relationship.
+- `(X% orphaned)` in plain (non-bold) parentheses next to each one.
+- Confirmed/failed status appended to each data-quality sub-bullet.
+
+STEP 4 — TRANSFORMATION TABLE (append immediately below the result diagram):
+| table | column | transformation |
+|---|---|---|
+Only include a row for issues you actually resolved. If a join fails with
+no clear fix, list it separately underneath as "Unresolved" rather than
+guessing a transformation.
+
+CONSTRAINTS:
+- Keep formatting identical to the hypothesis diagram (bold headers,
+  indented sub-bullets).
+- Don't invent transformations for joins that failed outright.
+
+
+Go through every notebook in /Workspace/Users/samwwalks@gmail.com/databricks_bootcamp_dwb/bike_lakehouse/silver/crm and /Workspace/Users/samwwalks@gmail.com/databricks_bootcamp_dwb/bike_lakehouse/silver/erp. For every notebook can you find documentation for a Source and Target table near the top of the notbook? 
+
+
+I want to re-do the join analysis after cell 10. I want to provide more guidence.
+I want you to write the code and find the most efficent methods of carying out the instructions that I am going to give you.
+Let's work through the hypothesis join diagram one join at a time starting with crm_customers.cst_id (primary key) → crm_sales.sls_cust_id. 
+For this case I want to just test joining the columns as they are, no transformations required. Please create a test for this. Try to keep the code succinct and readable.
+
+Ok this looks good but lets bundle this code into a function since we will probably use it again
+
+Great lets move onto testing the new the next relationship which is crm_customers.cst_key → erp_customers.CID however it looks like crm_customers.cst_key and erp_customers.CID may contain crm_customers.cst_id as a substring here are examples of each followed by crm_customers.cst_id AW00011028 NASAW00011028 11028. 
+
+To start with I want to confirm that crm_customers.cst_key always contains its unique crm_customers.cst_id.
+For every cst_id in crm_customers check that it can be found in the last 5 characters of cst_key
+
+next compare the number of unique rows in crm_customers.cst_key as it is and crm_customers.cst_key when we just take the last 5 characters. Nothing fancy just print out the counts.
+
+Now test if crm_customers.cst_key → erp_customers.CID join together under the transformation that splits each column into 2 parts. Part 1 is the prefix and part two is the last 5 characters of each column.
