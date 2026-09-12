@@ -563,3 +563,84 @@ For every cst_id in crm_customers check that it can be found in the last 5 chara
 next compare the number of unique rows in crm_customers.cst_key as it is and crm_customers.cst_key when we just take the last 5 characters. Nothing fancy just print out the counts.
 
 Now test if crm_customers.cst_key → erp_customers.CID join together under the transformation that splits each column into 2 parts. Part 1 is the prefix and part two is the last 5 characters of each column.
+
+
+In cell 10 please carry out the verification described in cell 9. You should first calculate and display the metrics using the tables in databricks_bootcamp_dwb.silver and then recalculate them using the tables in databricks_bootcamp_dwb.gold. I have included instructoins on how to calculate the average cost of products to manufacture but I left the others for you to infer. Please ask me if you are not confident about what to calculate. 
+
+When you are done please update the markdown cell 9 and 10 with the sql formulas you used to calculate each metric.
+
+1. silver: crm_sales.sales_amount
+2. I want the breakdown, separate count for each country
+3. Group by month not by year. Rephrased: Find the most popular and least popular month for sign-ups over all of the years. 
+4. 
+================================================================================
+Table: databricks_bootcamp_dwb.silver.crm_customers
+================================================================================
+Columns (8):
+  - customer_id
+  - firstname
+  - lastname
+  - marital_status
+  - gender
+  - date_created
+  - category_id
+  - silver_updated_at
+
+================================================================================
+Table: databricks_bootcamp_dwb.silver.crm_products
+================================================================================
+Columns (10):
+  - product_id
+  - product_name
+  - product_cost
+  - product_line
+  - start_date
+  - end_date
+  - end_date_test
+  - category_id
+  - product_key
+  - silver_updated_at
+
+================================================================================
+Table: databricks_bootcamp_dwb.silver.crm_sales
+================================================================================
+Columns (10):
+  - order_number
+  - product_key
+  - customer_id
+  - order_date
+  - ship_date
+  - due_date
+  - sales_amount
+  - quantity
+  - unit_price
+  - silver_updated_at
+
+================================================================================
+Table: databricks_bootcamp_dwb.silver.erp_customer_location
+================================================================================
+Columns (4):
+  - country
+  - customer_id
+  - category_id
+  - silver_updated_at
+
+================================================================================
+Table: databricks_bootcamp_dwb.silver.erp_customers
+================================================================================
+Columns (5):
+  - birth_date
+  - gender
+  - customer_id
+  - category_id
+  - silver_updated_at
+
+================================================================================
+Table: databricks_bootcamp_dwb.silver.erp_products
+================================================================================
+Columns (5):
+  - category
+  - sub_category
+  - maintenance
+  - category_id
+  - silver_updated_at
